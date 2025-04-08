@@ -1,4 +1,13 @@
 // Hash table logic (insert, delete, search)
+
+/*
+    TODO:
+    insert - Bobby
+    delete - Landon
+    search
+    table create
+    free table
+*/
 #include <stdio.h>
 #include <stdlib.h>
 #include "hash_table.h"
