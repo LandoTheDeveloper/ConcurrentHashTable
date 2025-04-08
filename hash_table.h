@@ -26,3 +26,4 @@ void delete(hash_struct *table, char *name);
 hash_struct *search(hash_struct *table, char *name);
 void print_table(hash_struct *table);
 void free_table(hash_struct *table);
+hash_struct *create_table();
