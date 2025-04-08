@@ -1,8 +1,5 @@
 // Function prototypes
 
-#ifndef HASH_TABLE_H
-#define HASH_TABLE_H
-
 #include <stdio.h>
 #include <stdint.h>
 
@@ -14,6 +11,18 @@ typedef struct hash_struct
     char name[50];
     uint32_t salary;
     struct hash_struct *next;
-} hashRecord;
+} hash_struct;
 
-#endif
+/*
+    Field/Description:
+    hash - 32-bit unsigned int for hash value produced by running name through Jenkins one at a time function.
+    name - String up to len(50)
+    salary - 32-bit unsigned
+    next - pointer to next node in list
+*/
+
+void insert(hash_struct *table, char *name, uint32_t salary);
+void delete(hash_struct *table, char *name);
+hash_struct *search(hash_struct *table, char *name);
+void print_table(hash_struct *table);
+void free_table(hash_struct *table);
