@@ -10,21 +10,19 @@
 */
 
 #include "hash_table.h"
+#include "read_write_lock.h"
+#include <pthread.h>
 #include <stdint.h>
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
-#include <pthread.h>
-#include "read_write_lock.h"
 
-pthread_rwlock_t rwlock = PTHREAD_RWLOCK_INITIALIZER;
+rwlock_t rwlock;
 
-uint32_t jenkins_one_at_a_time_hash(const uint8_t *key, size_t length)
-{
+uint32_t jenkins_one_at_a_time_hash(const uint8_t *key, size_t length) {
   size_t i = 0;
   uint32_t hash = 0;
-  while (i != length)
-  {
+  while (i != length) {
     hash += key[i++];
     hash += hash << 10;
     hash ^= hash >> 6;
@@ -35,16 +33,16 @@ uint32_t jenkins_one_at_a_time_hash(const uint8_t *key, size_t length)
   return hash;
 }
 
-hash_struct *create_table()
-{
+hash_struct *create_table() {
   hash_struct *table = malloc(sizeof(hash_struct) * TABLE_SIZE);
-  for (int i = 0; i < TABLE_SIZE; i++)
-  {
+  for (int i = 0; i < TABLE_SIZE; i++) {
     table[i].hash = 0;
     table[i].name[0] = '\0';
     table[i].salary = 0;
     table[i].next = NULL;
   }
+
+  rwlock_init(&rwlock);
 
   return table;
 }
@@ -54,8 +52,7 @@ hash_struct *create_table()
 // hash_struct* for the table to be updated, a char* for the name to be
 // inputted, and an int for the salary to be inputted the output is nothing but
 // it will update the table
-void insert(hash_struct *table, char *name, uint32_t salary)
-{
+void insert(hash_struct *table, char *name, uint32_t salary) {
   // getting the hash of the new node to be inputted and generate its index
   uint32_t hashOfNew =
       jenkins_one_at_a_time_hash((uint8_t *)name, strlen(name));
@@ -66,30 +63,32 @@ void insert(hash_struct *table, char *name, uint32_t salary)
   hash_struct *prev = NULL; // storage for last use value on the linked list
   int flag = 0;             // flag to see if an entry matched the input's hash
 
+  rwlock_acquire_writelock(&rwlock);
+
   // checking to see if there has been a value inputted into this location in
   // the table before
-  if (originalData->name[0] == '\0')
-  {
+  if (originalData->name[0] == '\0') {
     // No entry yet at this location, create a new entry
     originalData->hash = hashOfNew;
     strcpy(originalData->name, name);
     originalData->salary = salary;
     originalData->next = NULL;
 
-    printf("Created new entry at index %u: %s with Salary %d\n", index, name, salary);
-  }
-  else
-  {
+    printf("Created new entry at index %u: %s with Salary %d\n", index, name,
+           salary);
+  } else {
     // looping through all of the nodes linked to the table entry
-    while (originalData != NULL)
-    {
-      if (hashOfNew == originalData->hash)
-      { // checking each hash value to see if there is a direct match and replacing the entry if there is
+    while (originalData != NULL) {
+      if (hashOfNew ==
+          originalData
+              ->hash) { // checking each hash value to see if there is a direct
+                        // match and replacing the entry if there is
         strcpy(originalData->name, name);
         originalData->salary = salary;
         originalData->next = NULL;
         flag = 1;
-        printf("Updated existing entry at index %u: %s with new Salary %d\n", index, name, salary);
+        printf("Updated existing entry at index %u: %s with new Salary %d\n",
+               index, name, salary);
         break;
       }
       prev = originalData;
@@ -97,8 +96,7 @@ void insert(hash_struct *table, char *name, uint32_t salary)
     }
 
     // if an exact match was not found, the new data will be placed at the end
-    if (flag == 0)
-    {
+    if (flag == 0) {
       hash_struct *newNode =
           malloc(sizeof(hash_struct)); // creating a new table entry node
       newNode->hash = hashOfNew;
@@ -107,59 +105,55 @@ void insert(hash_struct *table, char *name, uint32_t salary)
       newNode->next = NULL;
 
       prev->next = newNode;
-      printf("Created new node in linked list at index %u: %s with Salary %d\n", index, name, salary);
+      printf("Created new node in linked list at index %u: %s with Salary %d\n",
+             index, name, salary);
     }
   }
+  rwlock_release_writelock(&rwlock);
 }
 
-void delete(hash_struct *table, char *name)
-{
+void delete(hash_struct *table, char *name) {
   uint32_t hash = jenkins_one_at_a_time_hash((uint8_t *)name, strlen(name));
   uint32_t index = hash % TABLE_SIZE;
 
-  pthread_rwlock_wrlock(&rwlock); // Acquire write lock for delete operation
+  rwlock_acquire_writelock(&rwlock); // Acquire write lock for delete operation
 
   hash_struct *current = &table[index];
   hash_struct *prev = NULL;
 
-  if (current->name[0] == '\0')
-  {
+  if (current->name[0] == '\0') {
     printf("No entry found to delete at index %u.\n", index);
-    pthread_rwlock_unlock(&rwlock); // Release the lock
+    rwlock_release_writelock(&rwlock); // Release the lock
     return;
   }
 
-  if (strcmp(current->name, name) == 0)
-  {
-    if (current->next == NULL)
-    {
+  if (strcmp(current->name, name) == 0) {
+    if (current->next == NULL) {
       printf("Deleting %s from index %u (no next node).\n", name, index);
       current->hash = 0;
       current->name[0] = '\0';
       current->salary = 0;
-    }
-    else
-    {
+    } else {
       hash_struct *temp = current->next;
-      printf("Deleting %s from index %u, replacing with next node.\n", name, index);
+      printf("Deleting %s from index %u, replacing with next node.\n", name,
+             index);
       *current = *temp;
       free(temp);
     }
-    pthread_rwlock_unlock(&rwlock); // Release the lock
+    rwlock_release_writelock(&rwlock); // Release the lock
     return;
   }
 
   prev = current;
   current = current->next;
 
-  while (current != NULL)
-  {
-    if (strcmp(current->name, name) == 0)
-    {
-      printf("Deleting %s from index %u (found in linked list).\n", name, index);
+  while (current != NULL) {
+    if (strcmp(current->name, name) == 0) {
+      printf("Deleting %s from index %u (found in linked list).\n", name,
+             index);
       prev->next = current->next;
       free(current);
-      pthread_rwlock_unlock(&rwlock); // Release the lock
+      rwlock_release_writelock(&rwlock); // Release the lock
       return;
     }
     prev = current;
@@ -167,16 +161,13 @@ void delete(hash_struct *table, char *name)
   }
 
   printf("No entry with name %s found in the table.\n", name);
-  pthread_rwlock_unlock(&rwlock); // Release the lock
+  rwlock_release_writelock(&rwlock); // Release the lock
 }
 
-void free_table(hash_struct *table)
-{
-  for (int i = 0; i < TABLE_SIZE; i++)
-  {
+void free_table(hash_struct *table) {
+  for (int i = 0; i < TABLE_SIZE; i++) {
     hash_struct *current = &table[i];
-    while (current != NULL)
-    {
+    while (current != NULL) {
       hash_struct *temp = current;
       current = current->next;
       free(temp);
@@ -185,17 +176,13 @@ void free_table(hash_struct *table)
   free(table);
 }
 
-void print_table(hash_struct *table)
-{
+void print_table(hash_struct *table) {
   printf("\n\nHash Table Contents:\n");
-  for (int i = 0; i < TABLE_SIZE; i++)
-  {
+  for (int i = 0; i < TABLE_SIZE; i++) {
     hash_struct *current = &table[i];
-    if (current->name[0] != '\0')
-    {
+    if (current->name[0] != '\0') {
       printf("Index %d: %s, Salary: %d\n", i, current->name, current->salary);
-      while (current->next != NULL)
-      {
+      while (current->next != NULL) {
         current = current->next;
         printf(" -> %s, Salary: %d\n", current->name, current->salary);
       }
