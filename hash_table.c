@@ -8,11 +8,16 @@
     table create - Landon - DONE
     free table - Landon - DONE
 */
+
 #include "hash_table.h"
 #include <stdint.h>
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
+#include <pthread.h>
+#include "read_write_lock.h"
+
+pthread_rwlock_t rwlock = PTHREAD_RWLOCK_INITIALIZER;
 
 uint32_t jenkins_one_at_a_time_hash(const uint8_t *key, size_t length)
 {
@@ -112,20 +117,20 @@ void delete(hash_struct *table, char *name)
   uint32_t hash = jenkins_one_at_a_time_hash((uint8_t *)name, strlen(name));
   uint32_t index = hash % TABLE_SIZE;
 
+  pthread_rwlock_wrlock(&rwlock); // Acquire write lock for delete operation
+
   hash_struct *current = &table[index];
   hash_struct *prev = NULL;
 
-  // Check if head is empty
   if (current->name[0] == '\0')
   {
     printf("No entry found to delete at index %u.\n", index);
+    pthread_rwlock_unlock(&rwlock); // Release the lock
     return;
   }
 
-  // If node matches
   if (strcmp(current->name, name) == 0)
   {
-    // No next node, clear its data
     if (current->next == NULL)
     {
       printf("Deleting %s from index %u (no next node).\n", name, index);
@@ -135,16 +140,15 @@ void delete(hash_struct *table, char *name)
     }
     else
     {
-      // If next node exists, copy its data to current node
       hash_struct *temp = current->next;
       printf("Deleting %s from index %u, replacing with next node.\n", name, index);
       *current = *temp;
       free(temp);
     }
+    pthread_rwlock_unlock(&rwlock); // Release the lock
     return;
   }
 
-  // Search linked list
   prev = current;
   current = current->next;
 
@@ -155,14 +159,15 @@ void delete(hash_struct *table, char *name)
       printf("Deleting %s from index %u (found in linked list).\n", name, index);
       prev->next = current->next;
       free(current);
+      pthread_rwlock_unlock(&rwlock); // Release the lock
       return;
     }
     prev = current;
     current = current->next;
   }
 
-  // If we reach here, the name wasn't found
   printf("No entry with name %s found in the table.\n", name);
+  pthread_rwlock_unlock(&rwlock); // Release the lock
 }
 
 void free_table(hash_struct *table)
