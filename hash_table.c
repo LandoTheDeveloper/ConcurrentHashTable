@@ -14,10 +14,12 @@
 #include <stdlib.h>
 #include <string.h>
 
-uint32_t jenkins_one_at_a_time_hash(const uint8_t *key, size_t length) {
+uint32_t jenkins_one_at_a_time_hash(const uint8_t *key, size_t length)
+{
   size_t i = 0;
   uint32_t hash = 0;
-  while (i != length) {
+  while (i != length)
+  {
     hash += key[i++];
     hash += hash << 10;
     hash ^= hash >> 6;
@@ -28,9 +30,11 @@ uint32_t jenkins_one_at_a_time_hash(const uint8_t *key, size_t length) {
   return hash;
 }
 
-hash_struct *create_table() {
+hash_struct *create_table()
+{
   hash_struct *table = malloc(sizeof(hash_struct) * TABLE_SIZE);
-  for (int i = 0; i < TABLE_SIZE; i++) {
+  for (int i = 0; i < TABLE_SIZE; i++)
+  {
     table[i].hash = 0;
     table[i].name[0] = '\0';
     table[i].salary = 0;
@@ -45,7 +49,8 @@ hash_struct *create_table() {
 // hash_struct* for the table to be updated, a char* for the name to be
 // inputted, and an int for the salary to be inputted the output is nothing but
 // it will update the table
-void insert(hash_struct *table, char *name, uint32_t salary) {
+void insert(hash_struct *table, char *name, uint32_t salary)
+{
   // getting the hash of the new node to be inputted and generate its index
   uint32_t hashOfNew =
       jenkins_one_at_a_time_hash((uint8_t *)name, strlen(name));
@@ -58,29 +63,37 @@ void insert(hash_struct *table, char *name, uint32_t salary) {
 
   // checking to see if there has been a value inputted into this location in
   // the table before
-  if (originalData->name[0] == '\0') {
+  if (originalData->name[0] == '\0')
+  {
+    // No entry yet at this location, create a new entry
     originalData->hash = hashOfNew;
     strcpy(originalData->name, name);
     originalData->salary = salary;
     originalData->next = NULL;
-  } else {
-    // looping through all of the nodes liked to the table entry
-    while (originalData != NULL) {
-      if (hashOfNew ==
-          originalData
-              ->hash) { // checking each hash value to see if there is a direct
-                        // match and replacing the entry if there is
+
+    printf("Created new entry at index %u: %s with Salary %d\n", index, name, salary);
+  }
+  else
+  {
+    // looping through all of the nodes linked to the table entry
+    while (originalData != NULL)
+    {
+      if (hashOfNew == originalData->hash)
+      { // checking each hash value to see if there is a direct match and replacing the entry if there is
         strcpy(originalData->name, name);
         originalData->salary = salary;
         originalData->next = NULL;
         flag = 1;
+        printf("Updated existing entry at index %u: %s with new Salary %d\n", index, name, salary);
         break;
       }
       prev = originalData;
       originalData = originalData->next;
     }
+
     // if an exact match was not found, the new data will be placed at the end
-    if (flag == 0) {
+    if (flag == 0)
+    {
       hash_struct *newNode =
           malloc(sizeof(hash_struct)); // creating a new table entry node
       newNode->hash = hashOfNew;
@@ -89,11 +102,13 @@ void insert(hash_struct *table, char *name, uint32_t salary) {
       newNode->next = NULL;
 
       prev->next = newNode;
+      printf("Created new node in linked list at index %u: %s with Salary %d\n", index, name, salary);
     }
   }
 }
 
-void delete(hash_struct *table, char *name) {
+void delete(hash_struct *table, char *name)
+{
   uint32_t hash = jenkins_one_at_a_time_hash((uint8_t *)name, strlen(name));
   uint32_t index = hash % TABLE_SIZE;
 
@@ -102,18 +117,27 @@ void delete(hash_struct *table, char *name) {
 
   // Check if head is empty
   if (current->name[0] == '\0')
+  {
+    printf("No entry found to delete at index %u.\n", index);
     return;
+  }
 
   // If node matches
-  if (strcmp(current->name, name) == 0) {
+  if (strcmp(current->name, name) == 0)
+  {
     // No next node, clear its data
-    if (current->next == NULL) {
+    if (current->next == NULL)
+    {
+      printf("Deleting %s from index %u (no next node).\n", name, index);
       current->hash = 0;
       current->name[0] = '\0';
       current->salary = 0;
-    } else {
+    }
+    else
+    {
       // If next node exists, copy its data to current node
       hash_struct *temp = current->next;
+      printf("Deleting %s from index %u, replacing with next node.\n", name, index);
       *current = *temp;
       free(temp);
     }
@@ -124,22 +148,30 @@ void delete(hash_struct *table, char *name) {
   prev = current;
   current = current->next;
 
-  while (current != NULL) {
-    if (strcmp(current->name, name) == 0) {
+  while (current != NULL)
+  {
+    if (strcmp(current->name, name) == 0)
+    {
+      printf("Deleting %s from index %u (found in linked list).\n", name, index);
       prev->next = current->next;
       free(current);
-      printf("Deleted: %s\n", name);
       return;
     }
     prev = current;
     current = current->next;
   }
+
+  // If we reach here, the name wasn't found
+  printf("No entry with name %s found in the table.\n", name);
 }
 
-void free_table(hash_struct *table) {
-  for (int i = 0; i < TABLE_SIZE; i++) {
+void free_table(hash_struct *table)
+{
+  for (int i = 0; i < TABLE_SIZE; i++)
+  {
     hash_struct *current = &table[i];
-    while (current != NULL) {
+    while (current != NULL)
+    {
       hash_struct *temp = current;
       current = current->next;
       free(temp);
