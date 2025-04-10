@@ -4,7 +4,7 @@
     TODO:
     insert - Bobby
     delete - Landon - DONE (need insert to test)
-    search
+    search - Juan - DONE (Need to test)
     table create - Landon - DONE
     free table - Landon - DONE
 */
@@ -120,6 +120,7 @@ void insert(hash_struct *table, char *name, uint32_t salary) {
   --insertCounter;
 }
 
+
 void delete(hash_struct *table, char *name) {
 
   while (insertCounter != 0) {
@@ -174,6 +175,33 @@ void delete(hash_struct *table, char *name) {
 
   printf("No entry with name %s found in the table.\n", name);
   rwlock_release_writelock(&rwlock); // Release the lock
+}
+
+hash_struct *search(hash_struct *table, char *name){
+  uint32_t searchHash = jenkins_one_at_a_time_hash((uint8_t *)name, strlen(name));
+  uint32_t index = searchHash % TABLE_SIZE;
+
+  rwlock_acquire_readlock(&rwlock); // Acquire read lock for search operation
+
+  hash_struct *current = &table[index];
+  if (current->name[0] == '\0') {
+    printf("No record found at %u.\n", index);
+    rwlock_release_readlock(&rwlock); // Release the lock
+    return NULL;
+  }
+
+  while (current != NULL) { //While loop finding the name in the linked list
+    if (strcmp(current->name, name) == 0) {
+      printf("Found %s at index %u with Salary %d.\n", name, index, current->salary);
+      rwlock_release_readlock(&rwlock); // Release the lock
+      return current;
+    }
+    current = current->next;
+  }
+
+  printf("No entry with name %s found in the table.\n", name);
+  rwlock_release_readlock(&rwlock); // Release the lock
+  return NULL;
 }
 
 void free_table(hash_struct *table) {
