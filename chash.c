@@ -8,7 +8,7 @@ int main()
 {
     hash_struct *table = create_table();
 
-    delete (table, "John Doe");
+    printf("hello, world!");
 
     return 0;
 }
