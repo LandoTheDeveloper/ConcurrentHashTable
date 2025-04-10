@@ -17,7 +17,14 @@
 #include <stdlib.h>
 #include <string.h>
 
-rwlock_t rwlock;
+rwlock_t rwlock; // This is the read/write lock variable
+
+// This will initially hold the total number of inserts. Each time an insert
+// occurs, the counter will be decreased by 1. When it reaches 0, the deletes
+// will be allowed to start
+int insertCounter;
+
+void setInsertCounter(int numberOfInserts) { insertCounter = numberOfInserts; }
 
 uint32_t jenkins_one_at_a_time_hash(const uint8_t *key, size_t length) {
   size_t i = 0;
@@ -110,9 +117,14 @@ void insert(hash_struct *table, char *name, uint32_t salary) {
     }
   }
   rwlock_release_writelock(&rwlock);
+  --insertCounter;
 }
 
 void delete(hash_struct *table, char *name) {
+
+  while (insertCounter != 0) {
+  }
+
   uint32_t hash = jenkins_one_at_a_time_hash((uint8_t *)name, strlen(name));
   uint32_t index = hash % TABLE_SIZE;
 
