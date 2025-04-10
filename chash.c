@@ -11,7 +11,9 @@ int main()
     insert(table, "Bob", 60000);     // Insert Bob
     insert(table, "Charlie", 70000); // Insert Charlie
     insert(table, "Alice", 55000);   // Update Alice's salary
-    delete (table, "Alice");         // Delete Alice
+    print_table(table);
+    delete (table, "Alice"); // Delete Alice
+    print_table(table);
 
     return 0;
 }

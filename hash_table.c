@@ -184,3 +184,21 @@ void free_table(hash_struct *table)
   }
   free(table);
 }
+
+void print_table(hash_struct *table)
+{
+  printf("\n\nHash Table Contents:\n");
+  for (int i = 0; i < TABLE_SIZE; i++)
+  {
+    hash_struct *current = &table[i];
+    if (current->name[0] != '\0')
+    {
+      printf("Index %d: %s, Salary: %d\n", i, current->name, current->salary);
+      while (current->next != NULL)
+      {
+        current = current->next;
+        printf(" -> %s, Salary: %d\n", current->name, current->salary);
+      }
+    }
+  }
+}
