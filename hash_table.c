@@ -16,6 +16,7 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
+#include <sys/time.h>
 
 rwlock_t rwlock; // This is the read/write lock variable
 
@@ -23,6 +24,15 @@ rwlock_t rwlock; // This is the read/write lock variable
 // occurs, the counter will be decreased by 1. When it reaches 0, the deletes
 // will be allowed to start
 int insertCounter;
+
+// Helper function for requesting timestamps in microseconds
+// Constructed by ChatGPT with prompt
+// "How would I format my print statements to include a timestamp?"
+unsigned long long get_timestamp() {
+    struct timeval tv;
+    gettimeofday(&tv, NULL);
+    return ((unsigned long long)tv.tv_sec * 1000000ULL) + tv.tv_usec;
+}
 
 void setInsertCounter(int numberOfInserts) { insertCounter = numberOfInserts; }
 
@@ -60,6 +70,8 @@ hash_struct *create_table() {
 // inputted, and an int for the salary to be inputted the output is nothing but
 // it will update the table
 void insert(hash_struct *table, char *name, uint32_t salary) {
+  printf("%llu: WAITING ON INSERTS\n", get_timestamp());
+
   // getting the hash of the new node to be inputted and generate its index
   uint32_t hashOfNew =
       jenkins_one_at_a_time_hash((uint8_t *)name, strlen(name));
@@ -71,6 +83,7 @@ void insert(hash_struct *table, char *name, uint32_t salary) {
   int flag = 0;             // flag to see if an entry matched the input's hash
 
   rwlock_acquire_writelock(&rwlock);
+  printf("%llu: WRITE LOCK ACQUIRED\n", get_timestamp());
 
   // checking to see if there has been a value inputted into this location in
   // the table before
@@ -117,11 +130,13 @@ void insert(hash_struct *table, char *name, uint32_t salary) {
     }
   }
   rwlock_release_writelock(&rwlock);
+  printf("%llu: WRITE LOCK RELEASED\n", get_timestamp());
   --insertCounter;
 }
 
 
 void delete(hash_struct *table, char *name) {
+  printf("%llu: DELETE AWAKENED\n", get_timestamp());
 
   while (insertCounter != 0) {
   }
@@ -130,6 +145,7 @@ void delete(hash_struct *table, char *name) {
   uint32_t index = hash % TABLE_SIZE;
 
   rwlock_acquire_writelock(&rwlock); // Acquire write lock for delete operation
+  printf("%llu: WRITE LOCK ACQUIRED", get_timestamp());
 
   hash_struct *current = &table[index];
   hash_struct *prev = NULL;
@@ -137,6 +153,7 @@ void delete(hash_struct *table, char *name) {
   if (current->name[0] == '\0') {
     printf("No entry found to delete at index %u.\n", index);
     rwlock_release_writelock(&rwlock); // Release the lock
+    printf("%llu: WRITE LOCK RELEASED", get_timestamp());
     return;
   }
 
@@ -154,6 +171,7 @@ void delete(hash_struct *table, char *name) {
       free(temp);
     }
     rwlock_release_writelock(&rwlock); // Release the lock
+    printf("%llu: WRITE LOCK RELEASED", get_timestamp());
     return;
   }
 
@@ -167,6 +185,7 @@ void delete(hash_struct *table, char *name) {
       prev->next = current->next;
       free(current);
       rwlock_release_writelock(&rwlock); // Release the lock
+      printf("%llu: WRITE LOCK RELEASED", get_timestamp());
       return;
     }
     prev = current;
@@ -175,6 +194,7 @@ void delete(hash_struct *table, char *name) {
 
   printf("No entry with name %s found in the table.\n", name);
   rwlock_release_writelock(&rwlock); // Release the lock
+  printf("%llu: WRITE LOCK RELEASED", get_timestamp());
 }
 
 hash_struct *search(hash_struct *table, char *name){
@@ -182,11 +202,14 @@ hash_struct *search(hash_struct *table, char *name){
   uint32_t index = searchHash % TABLE_SIZE;
 
   rwlock_acquire_readlock(&rwlock); // Acquire read lock for search operation
+  printf("%llu: READ LOCK ACQUIRED\n", get_timestamp());
 
   hash_struct *current = &table[index];
   if (current->name[0] == '\0') {
     printf("No record found at %u.\n", index);
+    printf("%llu: SEARCH: NOT FOUND NOT FOUND\n", get_timestamp());
     rwlock_release_readlock(&rwlock); // Release the lock
+    printf("%llu: READ LOCK RELEASED\n", get_timestamp());
     return NULL;
   }
 
@@ -194,13 +217,16 @@ hash_struct *search(hash_struct *table, char *name){
     if (strcmp(current->name, name) == 0) {
       printf("Found %s at index %u with Salary %d.\n", name, index, current->salary);
       rwlock_release_readlock(&rwlock); // Release the lock
+      printf("%llu: READ LOCK RELEASED\n", get_timestamp());
       return current;
     }
     current = current->next;
   }
 
   printf("No entry with name %s found in the table.\n", name);
+  printf("%llu: SEARCH: NOT FOUND NOT FOUND\n", get_timestamp());
   rwlock_release_readlock(&rwlock); // Release the lock
+  printf("%llu: READ LOCK RELEASED\n", get_timestamp());
   return NULL;
 }
 
