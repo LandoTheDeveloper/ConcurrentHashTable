@@ -145,7 +145,7 @@ void delete(hash_struct *table, char *name) {
   uint32_t index = hash % TABLE_SIZE;
 
   rwlock_acquire_writelock(&rwlock); // Acquire write lock for delete operation
-  printf("%llu: WRITE LOCK ACQUIRED", get_timestamp());
+  printf("%llu: WRITE LOCK ACQUIRED\n", get_timestamp());
 
   hash_struct *current = &table[index];
   hash_struct *prev = NULL;
@@ -153,7 +153,7 @@ void delete(hash_struct *table, char *name) {
   if (current->name[0] == '\0') {
     printf("No entry found to delete at index %u.\n", index);
     rwlock_release_writelock(&rwlock); // Release the lock
-    printf("%llu: WRITE LOCK RELEASED", get_timestamp());
+    printf("%llu: WRITE LOCK RELEASED\n", get_timestamp());
     return;
   }
 
@@ -171,7 +171,7 @@ void delete(hash_struct *table, char *name) {
       free(temp);
     }
     rwlock_release_writelock(&rwlock); // Release the lock
-    printf("%llu: WRITE LOCK RELEASED", get_timestamp());
+    printf("%llu: WRITE LOCK RELEASED\n", get_timestamp());
     return;
   }
 
@@ -185,7 +185,7 @@ void delete(hash_struct *table, char *name) {
       prev->next = current->next;
       free(current);
       rwlock_release_writelock(&rwlock); // Release the lock
-      printf("%llu: WRITE LOCK RELEASED", get_timestamp());
+      printf("%llu: WRITE LOCK RELEASED\n", get_timestamp());
       return;
     }
     prev = current;
@@ -194,7 +194,7 @@ void delete(hash_struct *table, char *name) {
 
   printf("No entry with name %s found in the table.\n", name);
   rwlock_release_writelock(&rwlock); // Release the lock
-  printf("%llu: WRITE LOCK RELEASED", get_timestamp());
+  printf("%llu: WRITE LOCK RELEASED\n", get_timestamp());
 }
 
 hash_struct *search(hash_struct *table, char *name){
