@@ -29,9 +29,9 @@ int insertCounter;
 // Constructed by ChatGPT with prompt
 // "How would I format my print statements to include a timestamp?"
 unsigned long long get_timestamp() {
-    struct timeval tv;
-    gettimeofday(&tv, NULL);
-    return ((unsigned long long)tv.tv_sec * 1000000ULL) + tv.tv_usec;
+  struct timeval tv;
+  gettimeofday(&tv, NULL);
+  return ((unsigned long long)tv.tv_sec * 1000000ULL) + tv.tv_usec;
 }
 
 void setInsertCounter(int numberOfInserts) { insertCounter = numberOfInserts; }
@@ -134,12 +134,15 @@ void insert(hash_struct *table, char *name, uint32_t salary) {
   --insertCounter;
 }
 
-
 void delete(hash_struct *table, char *name) {
   // While loop traps the delete operation until all inserts are completed
-  while (insertCounter != 0) {
+  if (insertCounter > 0) {
+    printf("%llu: WAITING ON INSERTS\n", get_timestamp());
+    // While loop traps the delete operation until all inserts are completed
+    while (insertCounter != 0) {
+    }
+    printf("%llu: DELETE AWAKENED\n", get_timestamp());
   }
-  printf("%llu: DELETE AWAKENED\n", get_timestamp());
 
   uint32_t hash = jenkins_one_at_a_time_hash((uint8_t *)name, strlen(name));
   uint32_t index = hash % TABLE_SIZE;
@@ -197,8 +200,9 @@ void delete(hash_struct *table, char *name) {
   printf("%llu: WRITE LOCK RELEASED\n", get_timestamp());
 }
 
-hash_struct *search(hash_struct *table, char *name){
-  uint32_t searchHash = jenkins_one_at_a_time_hash((uint8_t *)name, strlen(name));
+hash_struct *search(hash_struct *table, char *name) {
+  uint32_t searchHash =
+      jenkins_one_at_a_time_hash((uint8_t *)name, strlen(name));
   uint32_t index = searchHash % TABLE_SIZE;
 
   rwlock_acquire_readlock(&rwlock); // Acquire read lock for search operation
@@ -213,9 +217,10 @@ hash_struct *search(hash_struct *table, char *name){
     return NULL;
   }
 
-  while (current != NULL) { //While loop finding the name in the linked list
+  while (current != NULL) { // While loop finding the name in the linked list
     if (strcmp(current->name, name) == 0) {
-      printf("Found %s at index %u with Salary %d.\n", name, index, current->salary);
+      printf("Found %s at index %u with Salary %d.\n", name, index,
+             current->salary);
       rwlock_release_readlock(&rwlock); // Release the lock
       printf("%llu: READ LOCK RELEASED\n", get_timestamp());
       return current;
