@@ -136,10 +136,10 @@ void insert(hash_struct *table, char *name, uint32_t salary) {
 
 
 void delete(hash_struct *table, char *name) {
-  printf("%llu: DELETE AWAKENED\n", get_timestamp());
-
+  // While loop traps the delete operation until all inserts are completed
   while (insertCounter != 0) {
   }
+  printf("%llu: DELETE AWAKENED\n", get_timestamp());
 
   uint32_t hash = jenkins_one_at_a_time_hash((uint8_t *)name, strlen(name));
   uint32_t index = hash % TABLE_SIZE;
