@@ -30,7 +30,17 @@ int main() {
 
   for (int i = 0; i < inputNum; ++i) {
 
-    pthread_create(&threads[i], NULL, threadTypes[i], (void *)inputs[i]);
+    if (threadTypes[i] == 0) {
+      pthread_create(&threads[i], NULL, insert, (void *)inputs[i]);
+    }
+
+    if (threadTypes[i] == 1) {
+      pthread_create(&threads[i], NULL, delete, (void *)inputs[i]);
+    }
+
+    if (threadTypes[i] == 2) {
+      pthread_create(&threads[i], NULL, search, (void *)inputs[i]);
+    }
   }
 
   for (int i = 0; i < inputNum; ++i) {
